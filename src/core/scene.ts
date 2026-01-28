@@ -232,8 +232,59 @@ export class SceneBuilder {
     this.addWall(scene, outerMat, -s, h / 2, 0, t, h, s * 2);
 
     // === ATMOSPHERE ===
-    scene.fog = new THREE.FogExp2(0x2a3040, 0.018);
-    scene.background = new THREE.Color(0x2a3040);
+    scene.fog = new THREE.FogExp2(0x1a2030, 0.015);
+    
+    // === SKYBOX — Procedural gradient ===
+    const skyboxSize = GAME.WORLD_SIZE * 3;
+    const skyCanvas = document.createElement('canvas');
+    skyCanvas.width = 512;
+    skyCanvas.height = 512;
+    const skyCtx = skyCanvas.getContext('2d')!;
+    
+    // Create vertical gradient (dark top to slightly lighter horizon)
+    const gradient = skyCtx.createLinearGradient(0, 0, 0, 512);
+    gradient.addColorStop(0, '#0a0f18');      // Deep dark blue at top
+    gradient.addColorStop(0.4, '#151e2d');    // Dark blue-gray
+    gradient.addColorStop(0.7, '#1f2a3a');    // Slightly lighter
+    gradient.addColorStop(1, '#2a3545');      // Horizon
+    skyCtx.fillStyle = gradient;
+    skyCtx.fillRect(0, 0, 512, 512);
+    
+    // Add some subtle stars
+    skyCtx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    for (let i = 0; i < 100; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 300; // Only in upper portion
+      const size = Math.random() * 1.5 + 0.5;
+      skyCtx.beginPath();
+      skyCtx.arc(x, y, size, 0, Math.PI * 2);
+      skyCtx.fill();
+    }
+    
+    // Brighter stars
+    skyCtx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    for (let i = 0; i < 20; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 200;
+      const size = Math.random() * 2 + 1;
+      skyCtx.beginPath();
+      skyCtx.arc(x, y, size, 0, Math.PI * 2);
+      skyCtx.fill();
+    }
+    
+    const skyTexture = new THREE.CanvasTexture(skyCanvas);
+    
+    // Create skybox using a large sphere
+    const skyGeo = new THREE.SphereGeometry(skyboxSize, 32, 32);
+    const skyMat = new THREE.MeshBasicMaterial({
+      map: skyTexture,
+      side: THREE.BackSide,
+      fog: false,
+    });
+    const skybox = new THREE.Mesh(skyGeo, skyMat);
+    scene.add(skybox);
+    
+    scene.background = new THREE.Color(0x0a0f18);
   }
 
   private addWall(scene: THREE.Scene, mat: THREE.Material, x: number, y: number, z: number, w: number, h: number, d: number) {

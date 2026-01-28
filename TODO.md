@@ -1,88 +1,72 @@
-# TODO — FPS Game Multi-Agent Development
+# TODO — FPS Game Development
 
 ## Status Legend
 - ⬜ Not started
 - 🔄 In progress
 - ✅ Done
 - ❌ Blocked
-- 🔀 Merging
 
 ---
 
-## Phase 0: Setup
-- ⬜ Initialize git repo + branches
-- ⬜ Create project scaffold (Vite + Three.js + TS)
-- ⬜ Create shared types.ts and constants.ts
-- ⬜ Push skeleton to all branches
-- ⬜ Verify all agents (Claude Code, Codex, OpenCode, Qwen) are ready
-
-## Phase 1: Foundation — Agent Assignment
-| Task | Agent | Branch | Status |
-|------|-------|--------|--------|
-| Project scaffold | Orchestrator | main | ⬜ |
-| Core engine + game loop | Claude Code | feat/core-player | ⬜ |
-| FPS camera + movement | Claude Code | feat/core-player | ⬜ |
-| Weapon system | Codex CLI | feat/weapons-combat | ⬜ |
-| Enemy AI | OpenCode | feat/enemies-ai | ⬜ |
-| HUD + UI | Qwen (local) | feat/hud-audio | ⬜ |
-
-## Phase 2: Parallel Development
-| Task | Agent | Status | Notes |
-|------|-------|--------|-------|
-| Scene + renderer + loop | Claude Code | ⬜ | |
-| Player controller | Claude Code | ⬜ | |
-| Collision detection | Claude Code | ⬜ | |
-| Weapon class + raycasting | Codex CLI | ⬜ | |
-| Reload + ammo | Codex CLI | ⬜ | |
-| Muzzle flash + effects | Codex CLI | ⬜ | |
-| Enemy class + health | OpenCode | ⬜ | |
-| Patrol AI + aggro | OpenCode | ⬜ | |
-| Wave spawner | OpenCode | ⬜ | |
-| HUD overlay | Qwen | ⬜ | |
-| Menu screens | Qwen | ⬜ | |
-| Audio system | Qwen | ⬜ | |
-
-## Phase 3: Integration
+## Core Features
 | Task | Status | Notes |
 |------|--------|-------|
-| Merge core-player → main | ⬜ | |
-| Merge weapons-combat → main | ⬜ | |
-| Merge enemies-ai → main | ⬜ | |
-| Merge hud-audio → main | ⬜ | |
-| Integration testing | ⬜ | |
-| Screenshot review | ⬜ | |
+| Project scaffold (Vite + Three.js + TS) | ✅ | |
+| Core engine + game loop | ✅ | |
+| FPS camera + movement | ✅ | PointerLock API |
+| Player controller | ✅ | WASD + jump + sprint |
+| Collision detection | ✅ | |
+| Weapon system | ✅ | 3 weapons |
+| Raycasting + shooting | ✅ | |
+| Reload + ammo | ✅ | |
+| Muzzle flash + effects | ✅ | |
+| Enemy class + health | ✅ | |
+| Patrol AI + aggro | ✅ | Chase + attack states |
+| Wave spawner | ✅ | Scaling difficulty |
+| HUD overlay | ✅ | Enhanced with icons |
+| Menu screens | ✅ | Start/Pause/GameOver |
+| Audio system | ✅ | Procedural sounds |
 
-## Phase 4: Assets + Level
+## Polish Features
 | Task | Status | Notes |
 |------|--------|-------|
-| Download Kenney 3D assets | ⬜ | |
-| Generate textures (AI) | ⬜ | |
-| Build level geometry | ⬜ | |
-| Apply materials + lighting | ⬜ | |
-| Skybox | ⬜ | |
+| Blood splatter effects | ✅ | On enemy hit |
+| Death explosion effects | ✅ | Particle burst |
+| Skybox (gradient + stars) | ✅ | Procedural |
+| High score system | ✅ | LocalStorage |
+| Kill combo system | ✅ | Multiplier bonus |
+| Minimap / radar | ✅ | Enemy tracking |
+| Improved HUD design | ✅ | Weapon slots, stats panel |
+| Wave announcements | ✅ | Animated text |
 
-## Phase 5: Polish
+## Future Improvements
 | Task | Status | Notes |
 |------|--------|-------|
-| Particle effects | ⬜ | |
-| 3D audio | ⬜ | |
-| Minimap | ⬜ | |
-| Performance optimization | ⬜ | |
-| Final QA | ⬜ | |
-| Delivery | ⬜ | |
+| 3D weapon models | ⬜ | Replace box geometry |
+| 3D enemy models | ⬜ | Replace capsule geometry |
+| Real sound effects | ⬜ | Replace procedural audio |
+| More weapon types | ⬜ | |
+| Power-ups / health packs | ⬜ | |
+| Multiple levels | ⬜ | |
+| Mobile controls | ⬜ | |
+| Multiplayer | ⬜ | |
 
 ---
 
-## Agent Status Tracker
-| Agent | Process ID | Status | Last Update |
-|-------|-----------|--------|-------------|
-| Claude Code | — | Not started | — |
-| Codex CLI | — | Not started | — |
-| OpenCode | — | Not started | — |
-| Qwen (local) | — | Not started | — |
+## Changelog
 
-## Issues / Blockers
-(none yet)
+### v1.0 — Initial Release
+- Complete FPS gameplay loop
+- 3 weapons (Pistol, Shotgun, Assault Rifle)
+- Wave-based enemy spawning
+- Procedural textures and sounds
+- Full HUD with health, ammo, score
 
-## Merge Log
-(empty)
+### v1.1 — Polish Update (Current)
+- Added blood splatter and death explosions
+- Added procedural skybox with stars
+- Added high score leaderboard
+- Added kill combo system
+- Added minimap radar
+- Improved HUD design with weapon slots
+- Added wave start announcements

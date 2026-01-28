@@ -69,13 +69,21 @@ Built using multi-agent orchestration:
 
 Total: ~2,500 lines of TypeScript
 
+## Recent Updates (v1.1)
+
+- ✅ **Blood & Death Effects** — Splatter particles on hit, explosion on kill
+- ✅ **Skybox** — Procedural gradient with stars
+- ✅ **High Scores** — LocalStorage leaderboard
+- ✅ **Kill Combos** — Chain kills for bonus points
+- ✅ **Minimap Radar** — Track enemy positions
+- ✅ **Enhanced HUD** — Weapon slots, combo counter, wave announcements
+
 ## Roadmap
 
-- [ ] 3D models (weapons, enemies) via Hunyuan3D
-- [ ] Skybox / environment map
-- [ ] Particle system improvements
-- [ ] Sound effects (Web Audio samples)
-- [ ] Leaderboard / high scores
+- [ ] 3D models (weapons, enemies)
+- [ ] Real sound effects (Web Audio samples)
+- [ ] Power-ups / health packs
+- [ ] Multiple levels
 - [ ] Mobile controls
 
 ## License

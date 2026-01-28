@@ -4,10 +4,12 @@ import { FPSCamera } from './player/camera';
 import { PlayerController } from './player/controller';
 import { InputManager } from './player/input';
 import { WeaponManager } from './weapons/weapon';
+import { WeaponEffects } from './weapons/effects';
 import { EnemyManager } from './enemies/spawner';
 import { HUD } from './ui/hud';
 import { Crosshair } from './ui/crosshair';
 import { MenuManager } from './ui/menu';
+import { Minimap } from './ui/minimap';
 import { AudioManager } from './audio/sound';
 import { GAME } from './constants';
 
@@ -35,6 +37,19 @@ weapons.init(scene, fpsCamera.getCamera());
 const enemies = new EnemyManager();
 enemies.init(scene);
 
+// Standalone effects system for enemy hit/death visuals
+const enemyEffects = new WeaponEffects();
+enemyEffects.init(scene);
+
+// Wire up enemy effect callbacks
+enemies.onEnemyHit = (point, direction) => {
+  enemyEffects.createBloodSplatter(point, direction);
+};
+
+enemies.onEnemyDeath = (point) => {
+  enemyEffects.createDeathExplosion(point);
+};
+
 const hud = new HUD();
 hud.init();
 
@@ -43,6 +58,8 @@ crosshair.init();
 
 const audio = new AudioManager();
 audio.init();
+
+const minimap = new Minimap();
 
 const menu = new MenuManager();
 
@@ -62,7 +79,7 @@ enemies.onPlayerDamage = (damage: number) => {
   if (dead) {
     gameOver = true;
     fpsCamera.unlock();
-    menu.showGameOver(score, kills);
+    menu.showGameOver(score, kills, wave);
   }
 };
 
@@ -79,6 +96,7 @@ function nextWave() {
   wave++;
   enemies.spawnWave(wave);
   audio.play({ type: 'wave_start' });
+  hud.showWaveStart(wave);
 }
 
 menu.onStart = startGame;
@@ -106,6 +124,9 @@ engine.onUpdate((delta) => {
 
   // Weapons
   weapons.update(delta);
+  
+  // Enemy effects (blood, explosions)
+  enemyEffects.update(delta);
 
   // Shooting
   if (input.isMouseDown(0)) {
@@ -115,7 +136,9 @@ engine.onUpdate((delta) => {
       for (const hit of hits) {
         if (hit.object?.userData?.isEnemy) {
           const weapon = weapons.getCurrentWeapon();
-          enemies.applyDamageAtPoint(hit.point, weapon.damage, 0.5);
+          // Pass hit direction for blood splatter
+          const hitDirection = fpsCamera.getDirection();
+          enemies.applyDamageAtPoint(hit.point, weapon.damage, 0.5, hitDirection);
           audio.play({ type: 'hit', position: hit.point });
         }
       }
@@ -169,9 +192,17 @@ engine.onUpdate((delta) => {
     wave,
     isReloading: wData.isReloading ?? false,
     crosshairHit: false,
+    enemyCount: enemies.getAliveCount(),
   });
 
   crosshair.update(false, wData.isReloading ?? false);
+  
+  // Minimap
+  const enemyData = enemies.getEnemies().map(e => ({
+    position: e.getPosition(),
+    isDead: e.isDead(),
+  }));
+  minimap.update(player.getPosition(), fpsCamera.getCamera().rotation.y, enemyData);
 
   // Escape = pause
   if (input.isKeyDown('Escape')) fpsCamera.unlock();

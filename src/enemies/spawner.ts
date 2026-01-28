@@ -11,6 +11,12 @@ export class EnemyManager {
 
   /** Callback the game can set to receive player damage events */
   public onPlayerDamage: ((damage: number) => void) | null = null;
+  
+  /** Callback for enemy hit effects (blood splatter) */
+  public onEnemyHit: ((point: THREE.Vector3, direction?: THREE.Vector3) => void) | null = null;
+  
+  /** Callback for enemy death effects (explosion) */
+  public onEnemyDeath: ((point: THREE.Vector3) => void) | null = null;
 
   init(scene: THREE.Scene): void {
     this.scene = scene;
@@ -108,6 +114,7 @@ export class EnemyManager {
     point: THREE.Vector3,
     damage: number,
     range: number,
+    hitDirection?: THREE.Vector3,
   ): number {
     let kills = 0;
     for (const enemy of this.enemies) {
@@ -119,7 +126,21 @@ export class EnemyManager {
         const falloff = range > 0 ? 1 - dist / range : 1;
         const actualDamage = Math.max(1, Math.round(damage * Math.max(falloff, 0.3)));
         const killed = enemy.takeDamage(actualDamage);
-        if (killed) kills++;
+        
+        // Trigger hit effect (blood splatter)
+        if (this.onEnemyHit) {
+          const hitPoint = point.clone();
+          hitPoint.y = enemy.getPosition().y + 0.8; // Center of body
+          this.onEnemyHit(hitPoint, hitDirection);
+        }
+        
+        if (killed) {
+          kills++;
+          // Trigger death effect (explosion)
+          if (this.onEnemyDeath) {
+            this.onEnemyDeath(enemy.getPosition());
+          }
+        }
       }
     }
     return kills;
