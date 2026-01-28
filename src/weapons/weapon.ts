@@ -3,6 +3,7 @@ import { Weapon, HUDData } from '../types';
 import { GAME } from '../constants';
 import { ShootingSystem, HitResult } from './shooting';
 import { WeaponEffects } from './effects';
+import { createPistolModel, createShotgunModel, createAssaultRifleModel } from './models';
 
 // ============================================
 // WeaponManager — owns weapons, ammo, fire
@@ -80,57 +81,20 @@ export class WeaponManager {
   }
 
   // -------------------------------------------
-  // Create simple Three.js geometry per weapon
-  // Positioned in bottom-right of view
+  // Create detailed Three.js geometry per weapon
+  // Using models from models.ts
   // -------------------------------------------
   private createWeaponMesh(index: number): THREE.Group {
-    const group = new THREE.Group();
-    const gunMetal = new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8, roughness: 0.3 });
-    const grip = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.4, roughness: 0.7 });
-
     switch (index) {
-      case 0: { // Pistol — compact box + short barrel
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.15), gunMetal);
-        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.18, 8), gunMetal);
-        barrel.rotation.x = Math.PI / 2;
-        barrel.position.set(0, 0.03, -0.15);
-        const handle = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.1, 0.04), grip);
-        handle.position.set(0, -0.08, 0.03);
-        handle.rotation.x = 0.2;
-        group.add(body, barrel, handle);
-        group.position.set(0.3, -0.28, -0.5);
-        break;
-      }
-      case 1: { // Shotgun — longer barrel, wider body
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.35), gunMetal);
-        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.35, 8), gunMetal);
-        barrel.rotation.x = Math.PI / 2;
-        barrel.position.set(0, 0.02, -0.32);
-        const pump = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.045, 0.12), grip);
-        pump.position.set(0, -0.04, -0.08);
-        const stock = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.15), grip);
-        stock.position.set(0, -0.01, 0.22);
-        group.add(body, barrel, pump, stock);
-        group.position.set(0.32, -0.3, -0.5);
-        break;
-      }
-      case 2: { // Assault Rifle — long body + magazine
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.065, 0.4), gunMetal);
-        const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.25, 8), gunMetal);
-        barrel.rotation.x = Math.PI / 2;
-        barrel.position.set(0, 0.015, -0.3);
-        const mag = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.05), grip);
-        mag.position.set(0, -0.09, 0.0);
-        mag.rotation.x = -0.15;
-        const stock = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.07, 0.14), grip);
-        stock.position.set(0, -0.01, 0.24);
-        group.add(body, barrel, mag, stock);
-        group.position.set(0.3, -0.3, -0.5);
-        break;
-      }
+      case 0:
+        return createPistolModel();
+      case 1:
+        return createShotgunModel();
+      case 2:
+        return createAssaultRifleModel();
+      default:
+        return createPistolModel();
     }
-
-    return group;
   }
 
   // -------------------------------------------

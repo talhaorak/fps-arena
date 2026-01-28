@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { Enemy as EnemyData, EnemyState } from '../types';
 import { GAME } from '../constants';
+import { createGruntModel, getEnemyMaterials } from './models';
 
 let enemyIdCounter = 0;
 
@@ -45,56 +46,33 @@ export class Enemy {
     this.scene = scene;
     this.data.position.copy(position);
 
-    // --- Body: capsule-like shape (cylinder + two hemispheres) ---
-    const bodyRadius = 0.4;
-    const bodyHeight = 1.2;
-    const bodyMat = new THREE.MeshStandardMaterial({
-      color: 0xaa2222,
-      roughness: 0.6,
-      metalness: 0.2,
-      transparent: true,
-      opacity: 1.0,
+    // --- Create detailed humanoid model ---
+    const modelGroup = createGruntModel();
+    this.group.add(modelGroup);
+    
+    // Get all materials for fade animation
+    this.materials = getEnemyMaterials(modelGroup);
+    
+    // Find the body mesh for damage flash (use the chest)
+    this.bodyMesh = modelGroup.children[0] as THREE.Mesh;
+    
+    // Find eyes for reference (they're at positions with emissive material)
+    modelGroup.traverse((child) => {
+      if (child instanceof THREE.Mesh && 
+          child.material instanceof THREE.MeshStandardMaterial &&
+          child.material.emissiveIntensity > 1) {
+        if (!this.leftEye) {
+          this.leftEye = child;
+        } else if (!this.rightEye) {
+          this.rightEye = child;
+        }
+      }
     });
-    this.materials.push(bodyMat);
-
-    // Main cylinder torso
-    const bodyGeo = new THREE.CylinderGeometry(bodyRadius, bodyRadius * 0.85, bodyHeight, 10);
-    this.bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
-    this.bodyMesh.position.y = bodyHeight / 2 + 0.1;
-    this.bodyMesh.castShadow = true;
-    this.bodyMesh.receiveShadow = true;
-    this.group.add(this.bodyMesh);
-
-    // Head sphere
-    const headGeo = new THREE.SphereGeometry(bodyRadius * 0.9, 10, 8);
-    const headMesh = new THREE.Mesh(headGeo, bodyMat);
-    headMesh.position.y = bodyHeight + 0.1 + bodyRadius * 0.5;
-    headMesh.castShadow = true;
-    this.group.add(headMesh);
-
-    // --- Glowing emissive eyes ---
-    const eyeGeo = new THREE.SphereGeometry(0.07, 6, 6);
-    const eyeMat = new THREE.MeshStandardMaterial({
-      color: 0xffff44,
-      emissive: 0xffcc00,
-      emissiveIntensity: 2.5,
-      transparent: true,
-      opacity: 1.0,
-    });
-    this.materials.push(eyeMat);
-
-    this.leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-    this.leftEye.position.set(-0.15, bodyHeight + 0.1 + bodyRadius * 0.55, bodyRadius * 0.7);
-    this.group.add(this.leftEye);
-
-    this.rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-    this.rightEye.position.set(0.15, bodyHeight + 0.1 + bodyRadius * 0.55, bodyRadius * 0.7);
-    this.group.add(this.rightEye);
 
     // --- Health bar ---
     const hbWidth = 0.8;
     const hbHeight = 0.08;
-    const hbY = bodyHeight + 0.1 + bodyRadius * 2 + 0.3;
+    const hbY = 1.9; // Above the head
 
     // Background (dark)
     const hbBgGeo = new THREE.PlaneGeometry(hbWidth, hbHeight);
@@ -119,11 +97,18 @@ export class Enemy {
       side: THREE.DoubleSide,
       depthTest: false,
     });
-    this.healthBarFg = new THREE.Mesh(hbFgGeo, hbFgMat);
+    this.healthBarFg = new THREE.Mesh(hbFgGeo, hbBgMat.clone());
+    (this.healthBarFg.material as THREE.MeshBasicMaterial).color.set(0x44ff44);
+    (this.healthBarFg.material as THREE.MeshBasicMaterial).opacity = 0.9;
     this.healthBarFg.position.y = hbY;
     this.healthBarFg.position.z = 0.001; // slightly in front
     this.healthBarFg.renderOrder = 1000;
     this.group.add(this.healthBarFg);
+
+    // Mark all children as enemies for raycasting
+    this.group.traverse((child) => {
+      child.userData.isEnemy = true;
+    });
 
     // Position the group
     this.group.position.copy(position);
