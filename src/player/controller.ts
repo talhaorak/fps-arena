@@ -8,7 +8,7 @@ export class PlayerController {
   private position = new THREE.Vector3(0, 0, 0);
   private velocity = new THREE.Vector3();
   private grounded = false;
-  private health = GAME.PLAYER_MAX_HEALTH;
+  private health: number = GAME.PLAYER_MAX_HEALTH as number;
   private walls: THREE.Mesh[] = [];
   private scene!: THREE.Scene;
 
