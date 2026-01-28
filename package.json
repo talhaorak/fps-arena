@@ -1,13 +1,15 @@
 {
   "name": "fps-game",
   "version": "1.0.0",
-  "description": "",
+  "description": "🎮 3D FPS Arena - Wave-based shooter built with Three.js",
   "main": "index.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && gh-pages -d dist"
   },
+  "homepage": "https://talhaorak.github.io/fps-arena",
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -17,5 +19,8 @@
     "three": "^0.182.0",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
   }
 }
