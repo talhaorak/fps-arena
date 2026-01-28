@@ -1,107 +1,70 @@
 import * as THREE from 'three';
 import { GAME } from '../constants';
 
-const PLAYER_RADIUS = 0.4; // approximate body radius for wall collision
+const raycaster = new THREE.Raycaster();
+const downDir = new THREE.Vector3(0, -1, 0);
 
-const _raycaster = new THREE.Raycaster();
-const _downDir   = new THREE.Vector3(0, -1, 0);
-
-/**
- * Physics — static helpers for gravity, floor checking, and AABB wall collision.
- */
-export class Physics {
-  /**
-   * Apply gravity to the velocity vector.
-   * If the player is grounded we skip so velocity.y stays 0.
-   */
-  static applyGravity(velocity: THREE.Vector3, delta: number, isGrounded: boolean): void {
-    if (!isGrounded) {
-      velocity.y += GAME.GRAVITY * delta;
-    }
+export function applyGravity(velocity: THREE.Vector3, delta: number, isGrounded: boolean): void {
+  if (!isGrounded) {
+    velocity.y += GAME.GRAVITY * delta;
   }
+}
 
-  /**
-   * Cast a ray downward from `position` and return the Y coordinate
-   * of the nearest floor surface (or 0 if nothing is hit).
-   */
-  static checkFloor(position: THREE.Vector3, scene: THREE.Scene): number {
-    _raycaster.set(
-      new THREE.Vector3(position.x, position.y, position.z),
-      _downDir,
-    );
-    _raycaster.far = position.y + 10; // generous range
-
-    const intersects = _raycaster.intersectObjects(scene.children, true);
-
-    for (const hit of intersects) {
-      // Skip non-mesh or invisible
-      if (!(hit.object instanceof THREE.Mesh)) continue;
-      // We consider anything roughly horizontal as floor
-      if (hit.face) {
-        const normal = hit.face.normal.clone();
-        hit.object.updateMatrixWorld();
-        normal.transformDirection(hit.object.matrixWorld);
-        if (normal.y > 0.5) {
-          return hit.point.y;
-        }
+export function checkFloor(position: THREE.Vector3, scene: THREE.Scene): { grounded: boolean; height: number } {
+  raycaster.set(new THREE.Vector3(position.x, position.y + 1, position.z), downDir);
+  raycaster.far = 3;
+  const hits = raycaster.intersectObjects(scene.children, true);
+  for (const hit of hits) {
+    if (hit.object.userData.isFloor || hit.object.userData.isWall) {
+      const groundY = hit.point.y;
+      if (position.y - groundY < 0.1) {
+        return { grounded: true, height: groundY };
       }
     }
-    return 0; // default ground plane
   }
+  // Default floor at y=0
+  if (position.y <= 0.01) {
+    return { grounded: true, height: 0 };
+  }
+  return { grounded: false, height: 0 };
+}
 
-  /**
-   * Simple AABB collision: push the player out of any wall mesh whose
-   * bounding box they overlap with.  Returns the corrected position.
-   */
-  static checkWallCollisions(
-    position: THREE.Vector3,
-    velocity: THREE.Vector3,
-    walls: THREE.Mesh[],
-  ): THREE.Vector3 {
-    const pos = position.clone();
+export function checkWallCollisions(
+  position: THREE.Vector3,
+  velocity: THREE.Vector3,
+  walls: THREE.Mesh[]
+): THREE.Vector3 {
+  const newPos = position.clone().add(velocity);
+  const playerRadius = 0.4;
+  
+  for (const wall of walls) {
+    if (!wall.geometry.boundingBox) wall.geometry.computeBoundingBox();
+    const box = wall.geometry.boundingBox!.clone();
+    box.applyMatrix4(wall.matrixWorld);
+    
+    // Expand box by player radius
+    box.min.x -= playerRadius;
+    box.min.z -= playerRadius;
+    box.max.x += playerRadius;
+    box.max.z += playerRadius;
 
-    for (const wall of walls) {
-      // Ensure bounding box is computed
-      if (!wall.geometry.boundingBox) {
-        wall.geometry.computeBoundingBox();
-      }
-      const bb = wall.geometry.boundingBox!.clone();
-      bb.applyMatrix4(wall.matrixWorld);
-
-      // Expand box by player radius
-      const min = bb.min.clone().subScalar(PLAYER_RADIUS);
-      const max = bb.max.clone().addScalar(PLAYER_RADIUS);
-
-      // Check overlap (XZ + Y)
-      if (
-        pos.x > min.x && pos.x < max.x &&
-        pos.z > min.z && pos.z < max.z &&
-        pos.y > min.y && pos.y < max.y
-      ) {
-        // Find smallest penetration axis and push out
-        const overlapXmin = pos.x - min.x;
-        const overlapXmax = max.x - pos.x;
-        const overlapZmin = pos.z - min.z;
-        const overlapZmax = max.z - pos.z;
-
-        const minOverlap = Math.min(overlapXmin, overlapXmax, overlapZmin, overlapZmax);
-
-        if (minOverlap === overlapXmin) {
-          pos.x = min.x;
-          velocity.x = 0;
-        } else if (minOverlap === overlapXmax) {
-          pos.x = max.x;
-          velocity.x = 0;
-        } else if (minOverlap === overlapZmin) {
-          pos.z = min.z;
-          velocity.z = 0;
-        } else {
-          pos.z = max.z;
-          velocity.z = 0;
-        }
-      }
+    if (newPos.x > box.min.x && newPos.x < box.max.x &&
+        newPos.z > box.min.z && newPos.z < box.max.z &&
+        newPos.y < box.max.y && newPos.y + GAME.PLAYER_HEIGHT > box.min.y) {
+      
+      // Push out along smallest penetration axis
+      const dx1 = newPos.x - box.min.x;
+      const dx2 = box.max.x - newPos.x;
+      const dz1 = newPos.z - box.min.z;
+      const dz2 = box.max.z - newPos.z;
+      
+      const minD = Math.min(dx1, dx2, dz1, dz2);
+      if (minD === dx1) newPos.x = box.min.x;
+      else if (minD === dx2) newPos.x = box.max.x;
+      else if (minD === dz1) newPos.z = box.min.z;
+      else newPos.z = box.max.z;
     }
-
-    return pos;
   }
+  
+  return newPos;
 }

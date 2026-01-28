@@ -2,123 +2,86 @@ import * as THREE from 'three';
 import { GAME } from '../constants';
 import { InputManager } from './input';
 import { FPSCamera } from './camera';
-import { Physics } from '../core/physics';
+import { applyGravity, checkFloor, checkWallCollisions } from '../core/physics';
 
-/**
- * PlayerController — WASD movement relative to camera, jumping,
- * gravity, and collision with the floor / walls.
- */
 export class PlayerController {
-  private position: THREE.Vector3 = new THREE.Vector3(0, GAME.PLAYER_HEIGHT, 0);
-  private velocity: THREE.Vector3 = new THREE.Vector3();
+  private position = new THREE.Vector3(0, 0, 0);
+  private velocity = new THREE.Vector3();
   private grounded = false;
-  private player: THREE.Object3D = new THREE.Object3D();
-  private fpsCamera: FPSCamera;
+  private health = GAME.PLAYER_MAX_HEALTH;
   private walls: THREE.Mesh[] = [];
-  private scene: THREE.Scene | null = null;
+  private scene!: THREE.Scene;
 
-  constructor(fpsCamera: FPSCamera) {
-    this.fpsCamera = fpsCamera;
-    this.player.add(fpsCamera.getCamera());
-    fpsCamera.getCamera().position.set(0, GAME.PLAYER_HEIGHT, 0);
-  }
-
-  /** Add the player object into the scene and store wall references */
-  init(scene: THREE.Scene, walls: THREE.Mesh[] = []): void {
+  init(scene: THREE.Scene, walls: THREE.Mesh[], spawnPos?: THREE.Vector3) {
     this.scene = scene;
     this.walls = walls;
-    scene.add(this.player);
-    this.player.position.copy(this.position);
+    if (spawnPos) this.position.copy(spawnPos);
   }
 
-  /** Per-frame update: read input, move, apply physics */
-  update(delta: number, inputManager: InputManager): void {
-    if (!this.scene) return;
+  update(delta: number, input: InputManager, camera: FPSCamera) {
+    if (!camera.isLocked()) return;
 
-    // ---- mouse look (only while locked) ----
-    if (this.fpsCamera.isLocked()) {
-      const md = inputManager.getMouseDelta();
-      this.fpsCamera.applyMouseDelta(md.x, md.y);
-      inputManager.resetMouseDelta();
-    }
-
-    // ---- movement direction ----
-    const forward = new THREE.Vector3();
-    const right   = new THREE.Vector3();
-    const yaw     = this.fpsCamera.getYaw();
-
-    forward.set(-Math.sin(yaw), 0, -Math.cos(yaw));
-    right.set(Math.cos(yaw), 0, -Math.sin(yaw));
+    // Movement direction relative to camera
+    const forward = new THREE.Vector3(0, 0, -1);
+    const right = new THREE.Vector3(1, 0, 0);
+    const yaw = camera.getYaw();
+    forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    right.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
 
     const moveDir = new THREE.Vector3();
+    if (input.isKeyDown('KeyW')) moveDir.add(forward);
+    if (input.isKeyDown('KeyS')) moveDir.sub(forward);
+    if (input.isKeyDown('KeyD')) moveDir.add(right);
+    if (input.isKeyDown('KeyA')) moveDir.sub(right);
 
-    if (inputManager.isKeyDown('w')) moveDir.add(forward);
-    if (inputManager.isKeyDown('s')) moveDir.sub(forward);
-    if (inputManager.isKeyDown('a')) moveDir.sub(right);
-    if (inputManager.isKeyDown('d')) moveDir.add(right);
+    if (moveDir.length() > 0) moveDir.normalize();
 
-    if (moveDir.lengthSq() > 0) moveDir.normalize();
+    const speed = input.isKeyDown('ShiftLeft') ? GAME.PLAYER_SPRINT_SPEED : GAME.PLAYER_SPEED;
+    this.velocity.x = moveDir.x * speed * delta;
+    this.velocity.z = moveDir.z * speed * delta;
 
-    // Sprint
-    const speed = inputManager.isKeyDown('shift')
-      ? GAME.PLAYER_SPRINT_SPEED
-      : GAME.PLAYER_SPEED;
-
-    // Horizontal velocity
-    this.velocity.x = moveDir.x * speed;
-    this.velocity.z = moveDir.z * speed;
-
-    // ---- jump ----
-    if (inputManager.isKeyDown(' ') && this.grounded) {
-      this.velocity.y = GAME.PLAYER_JUMP_FORCE;
+    // Jump
+    if (input.isKeyDown('Space') && this.grounded) {
+      this.velocity.y = GAME.PLAYER_JUMP_FORCE * delta * 3;
       this.grounded = false;
     }
 
-    // ---- gravity ----
-    Physics.applyGravity(this.velocity, delta, this.grounded);
+    // Gravity
+    applyGravity(this.velocity, delta, this.grounded);
+    this.position.y += this.velocity.y * delta;
 
-    // ---- tentative new position ----
-    const newPos = this.position.clone();
-    newPos.x += this.velocity.x * delta;
-    newPos.y += this.velocity.y * delta;
-    newPos.z += this.velocity.z * delta;
+    // Wall collisions
+    const newPos = checkWallCollisions(this.position, new THREE.Vector3(this.velocity.x, 0, this.velocity.z), this.walls);
+    this.position.x = newPos.x;
+    this.position.z = newPos.z;
 
-    // ---- wall collisions (XZ only) ----
-    const corrected = Physics.checkWallCollisions(newPos, this.velocity, this.walls);
-    newPos.copy(corrected);
-
-    // ---- floor check ----
-    const floorY = Physics.checkFloor(newPos, this.scene);
-    const feetY  = newPos.y - GAME.PLAYER_HEIGHT;
-
-    if (feetY <= floorY) {
-      newPos.y = floorY + GAME.PLAYER_HEIGHT;
+    // Floor check
+    const floor = checkFloor(this.position, this.scene);
+    this.grounded = floor.grounded;
+    if (this.grounded && this.position.y < floor.height) {
+      this.position.y = floor.height;
       this.velocity.y = 0;
-      this.grounded = true;
-    } else {
-      this.grounded = false;
     }
 
-    // ---- commit position ----
-    this.position.copy(newPos);
-    this.player.position.copy(this.position);
+    // Update camera position
+    camera.setPosition(this.position);
 
-    // ---- camera update ----
-    const isMoving = moveDir.lengthSq() > 0 && this.grounded;
-    this.fpsCamera.getCamera().position.set(0, GAME.PLAYER_HEIGHT, 0);
-    this.fpsCamera.update(delta, isMoving, this.velocity);
+    // Mouse look
+    const mouseDelta = input.getMouseDelta();
+    camera.update(delta, moveDir.length() > 0, mouseDelta);
+    input.resetMouseDelta();
+  }
+
+  takeDamage(amount: number): boolean {
+    this.health -= amount;
+    if (this.health <= 0) { this.health = 0; return true; }
+    return false;
   }
 
   getPosition(): THREE.Vector3 { return this.position.clone(); }
   getVelocity(): THREE.Vector3 { return this.velocity.clone(); }
   isGrounded(): boolean { return this.grounded; }
-  getPlayer(): THREE.Object3D { return this.player; }
-  getCamera(): FPSCamera { return this.fpsCamera; }
-
-  /** Teleport the player to a given position */
-  setPosition(pos: THREE.Vector3): void {
-    this.position.copy(pos);
-    this.position.y = pos.y + GAME.PLAYER_HEIGHT;
-    this.player.position.copy(this.position);
-  }
+  getHealth(): number { return this.health; }
+  isMoving(): boolean { return this.velocity.x !== 0 || this.velocity.z !== 0; }
+  reset(pos: THREE.Vector3) { this.position.copy(pos); this.velocity.set(0, 0, 0); this.health = GAME.PLAYER_MAX_HEALTH; }
 }

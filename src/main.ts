@@ -1,86 +1,41 @@
 import { GameEngine } from './core/engine';
 import { SceneBuilder } from './core/scene';
-import { InputManager } from './player/input';
 import { FPSCamera } from './player/camera';
 import { PlayerController } from './player/controller';
+import { InputManager } from './player/input';
+import { GAME } from './constants';
 
-// ---- bootstrap ----
-const engine   = new GameEngine();
+// === INIT ===
+const engine = new GameEngine();
+engine.init();
+const scene = engine.getScene();
+
 const sceneBuilder = new SceneBuilder();
-const input    = new InputManager();
+sceneBuilder.build(scene);
+
 const fpsCamera = new FPSCamera();
-const player   = new PlayerController(fpsCamera);
+fpsCamera.init(engine.getDomElement());
 
-function main(): void {
-  // 1. Engine (renderer + scene)
-  engine.init();
+const input = new InputManager();
+input.init();
 
-  // 2. Build level
-  const scene = engine.getScene();
-  sceneBuilder.build(scene);
+const player = new PlayerController();
+const spawnPoints = sceneBuilder.getSpawnPoints();
+player.init(scene, sceneBuilder.getWalls(), spawnPoints[0]);
 
-  // 3. Player + camera
-  const domElement = engine.getDomElement();
-  fpsCamera.init(domElement);
-  player.init(scene, sceneBuilder.getWalls());
+// === BLOCKER ===
+const blocker = document.getElementById('blocker')!;
+document.addEventListener('pointerlockchange', () => {
+  blocker.style.display = document.pointerLockElement ? 'none' : 'flex';
+});
 
-  // Place player at first spawn point
-  const spawns = sceneBuilder.getSpawnPoints();
-  if (spawns.length > 0) {
-    player.setPosition(spawns[0]);
-  }
+// === GAME LOOP ===
+engine.onUpdate((delta) => {
+  player.update(delta, input, fpsCamera);
+  fpsCamera.setPosition(player.getPosition());
+});
 
-  // 4. Input
-  input.init();
+engine.start(fpsCamera.getCamera());
 
-  // 5. Tell engine which camera to render with
-  engine.setCamera(fpsCamera.getCamera());
-
-  // 6. Game loop callback
-  engine.onUpdate((delta) => {
-    player.update(delta, input);
-  });
-
-  // 7. Pointer-lock click-to-start
-  const overlay = createOverlay();
-  overlay.addEventListener('click', () => {
-    fpsCamera.lock();
-  });
-
-  document.addEventListener('pointerlockchange', () => {
-    overlay.style.display = fpsCamera.isLocked() ? 'none' : 'flex';
-  });
-
-  // 8. Start!
-  engine.start();
-}
-
-/** Simple full-screen overlay prompting the user to click */
-function createOverlay(): HTMLDivElement {
-  const overlay = document.createElement('div');
-  overlay.id = 'start-overlay';
-  Object.assign(overlay.style, {
-    position: 'fixed',
-    inset: '0',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'rgba(0,0,0,0.75)',
-    color: '#fff',
-    fontFamily: 'monospace',
-    fontSize: '24px',
-    cursor: 'pointer',
-    zIndex: '1000',
-    userSelect: 'none',
-  });
-  overlay.textContent = '🎯 Click to Start';
-  document.body.appendChild(overlay);
-  return overlay;
-}
-
-// Remove default margin/padding
-const style = document.createElement('style');
-style.textContent = `* { margin: 0; padding: 0; } body { overflow: hidden; }`;
-document.head.appendChild(style);
-
-main();
+console.log('[FPS Game] Running! Click to play.');
+console.log('[FPS Game] Rooms:', spawnPoints.length, '| Walls:', sceneBuilder.getWalls().length);
