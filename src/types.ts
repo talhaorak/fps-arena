@@ -79,7 +79,7 @@ export interface HUDData {
 }
 
 export interface AudioEvent {
-  type: 'gunshot' | 'reload' | 'footstep' | 'hit' | 'kill' | 'damage' | 'ambient' | 'wave_start';
+  type: 'gunshot' | 'reload' | 'footstep' | 'hit' | 'kill' | 'damage' | 'ambient' | 'wave_start' | 'headshot' | 'pickup';
   position?: THREE.Vector3;
   volume?: number;
 }

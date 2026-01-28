@@ -276,6 +276,238 @@ export function createGruntModel(): THREE.Group {
 }
 
 // ============================================
+// RUNNER — Fast, agile enemy (smaller, hunched)
+// ============================================
+export function createRunnerModel(): THREE.Group {
+  const group = new THREE.Group();
+  
+  const fastSkin = new THREE.MeshStandardMaterial({ 
+    color: 0x226622, roughness: 0.6, metalness: 0.1 
+  });
+  const darkGreen = new THREE.MeshStandardMaterial({ 
+    color: 0x113311, roughness: 0.7, metalness: 0.05 
+  });
+  
+  // Hunched torso (leaning forward)
+  const torso = new THREE.Mesh(
+    new THREE.BoxGeometry(0.35, 0.4, 0.25),
+    fastSkin
+  );
+  torso.position.set(0, 0.8, 0.1);
+  torso.rotation.x = 0.4; // Leaning forward
+  group.add(torso);
+  
+  // Small head
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.12, 10, 8),
+    fastSkin
+  );
+  head.position.set(0, 1.1, 0.2);
+  group.add(head);
+  
+  // Large glowing eyes (bug-like)
+  const eyeGeo = new THREE.SphereGeometry(0.05, 8, 8);
+  const eyeMat = new THREE.MeshStandardMaterial({ 
+    color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 3.0 
+  });
+  const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+  leftEye.position.set(-0.06, 1.12, 0.28);
+  group.add(leftEye);
+  const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
+  rightEye.position.set(0.06, 1.12, 0.28);
+  group.add(rightEye);
+  
+  // Long arms (reaching forward)
+  const armGeo = new THREE.CylinderGeometry(0.04, 0.03, 0.4, 6);
+  const leftArm = new THREE.Mesh(armGeo, fastSkin);
+  leftArm.position.set(-0.25, 0.7, 0.2);
+  leftArm.rotation.z = 0.8;
+  leftArm.rotation.x = -0.5;
+  group.add(leftArm);
+  const rightArm = new THREE.Mesh(armGeo, fastSkin);
+  rightArm.position.set(0.25, 0.7, 0.2);
+  rightArm.rotation.z = -0.8;
+  rightArm.rotation.x = -0.5;
+  group.add(rightArm);
+  
+  // Claws
+  const clawGeo = new THREE.ConeGeometry(0.02, 0.1, 4);
+  for (let i = 0; i < 3; i++) {
+    const lClaw = new THREE.Mesh(clawGeo, darkGreen);
+    lClaw.rotation.x = Math.PI / 2;
+    lClaw.position.set(-0.4 - i * 0.025, 0.5, 0.35);
+    group.add(lClaw);
+    const rClaw = new THREE.Mesh(clawGeo, darkGreen);
+    rClaw.rotation.x = Math.PI / 2;
+    rClaw.position.set(0.4 + i * 0.025, 0.5, 0.35);
+    group.add(rClaw);
+  }
+  
+  // Digitigrade legs (bent backward)
+  const thighGeo = new THREE.CylinderGeometry(0.06, 0.05, 0.25, 6);
+  const leftThigh = new THREE.Mesh(thighGeo, fastSkin);
+  leftThigh.position.set(-0.1, 0.5, -0.05);
+  leftThigh.rotation.x = 0.3;
+  group.add(leftThigh);
+  const rightThigh = new THREE.Mesh(thighGeo, fastSkin);
+  rightThigh.position.set(0.1, 0.5, -0.05);
+  rightThigh.rotation.x = 0.3;
+  group.add(rightThigh);
+  
+  const shinGeo = new THREE.CylinderGeometry(0.04, 0.03, 0.25, 6);
+  const leftShin = new THREE.Mesh(shinGeo, fastSkin);
+  leftShin.position.set(-0.1, 0.2, 0.05);
+  leftShin.rotation.x = -0.5;
+  group.add(leftShin);
+  const rightShin = new THREE.Mesh(shinGeo, fastSkin);
+  rightShin.position.set(0.1, 0.2, 0.05);
+  rightShin.rotation.x = -0.5;
+  group.add(rightShin);
+  
+  // Enable shadows
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  
+  return group;
+}
+
+// ============================================
+// TANK — Heavy armored enemy (big, slow)
+// ============================================
+export function createTankModel(): THREE.Group {
+  const group = new THREE.Group();
+  
+  const tankSkin = new THREE.MeshStandardMaterial({ 
+    color: 0x553333, roughness: 0.8, metalness: 0.1 
+  });
+  const armor = new THREE.MeshStandardMaterial({ 
+    color: 0x222222, roughness: 0.3, metalness: 0.7 
+  });
+  const glow = new THREE.MeshStandardMaterial({ 
+    color: 0xff3300, emissive: 0xff2200, emissiveIntensity: 2.0 
+  });
+  
+  // Massive torso
+  const torso = new THREE.Mesh(
+    new THREE.BoxGeometry(0.8, 0.7, 0.5),
+    tankSkin
+  );
+  torso.position.set(0, 1.2, 0);
+  group.add(torso);
+  
+  // Heavy chest armor
+  const chestPlate = new THREE.Mesh(
+    new THREE.BoxGeometry(0.75, 0.5, 0.15),
+    armor
+  );
+  chestPlate.position.set(0, 1.25, 0.3);
+  group.add(chestPlate);
+  
+  // Shoulder pads
+  const shoulderGeo = new THREE.SphereGeometry(0.2, 8, 6, 0, Math.PI);
+  const leftShoulder = new THREE.Mesh(shoulderGeo, armor);
+  leftShoulder.rotation.z = Math.PI / 2;
+  leftShoulder.position.set(-0.5, 1.4, 0);
+  group.add(leftShoulder);
+  const rightShoulder = new THREE.Mesh(shoulderGeo, armor);
+  rightShoulder.rotation.z = -Math.PI / 2;
+  rightShoulder.position.set(0.5, 1.4, 0);
+  group.add(rightShoulder);
+  
+  // Small armored head
+  const head = new THREE.Mesh(
+    new THREE.BoxGeometry(0.25, 0.25, 0.2),
+    armor
+  );
+  head.position.set(0, 1.7, 0.05);
+  group.add(head);
+  
+  // Glowing visor slit
+  const visor = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 0.04, 0.05),
+    glow
+  );
+  visor.position.set(0, 1.7, 0.15);
+  group.add(visor);
+  
+  // Thick arms
+  const armGeo = new THREE.CylinderGeometry(0.12, 0.1, 0.35, 8);
+  const leftArm = new THREE.Mesh(armGeo, tankSkin);
+  leftArm.position.set(-0.55, 1.0, 0);
+  group.add(leftArm);
+  const rightArm = new THREE.Mesh(armGeo, tankSkin);
+  rightArm.position.set(0.55, 1.0, 0);
+  group.add(rightArm);
+  
+  // Arm bracers
+  const bracerGeo = new THREE.CylinderGeometry(0.14, 0.12, 0.15, 8);
+  const leftBracer = new THREE.Mesh(bracerGeo, armor);
+  leftBracer.position.set(-0.55, 0.85, 0.05);
+  group.add(leftBracer);
+  const rightBracer = new THREE.Mesh(bracerGeo, armor);
+  rightBracer.position.set(0.55, 0.85, 0.05);
+  group.add(rightBracer);
+  
+  // Massive fists
+  const fistGeo = new THREE.BoxGeometry(0.18, 0.2, 0.15);
+  const leftFist = new THREE.Mesh(fistGeo, tankSkin);
+  leftFist.position.set(-0.55, 0.65, 0.1);
+  group.add(leftFist);
+  const rightFist = new THREE.Mesh(fistGeo, tankSkin);
+  rightFist.position.set(0.55, 0.65, 0.1);
+  group.add(rightFist);
+  
+  // Belt with pouches
+  const belt = new THREE.Mesh(
+    new THREE.BoxGeometry(0.85, 0.12, 0.55),
+    armor
+  );
+  belt.position.set(0, 0.8, 0);
+  group.add(belt);
+  
+  // Thick legs
+  const legGeo = new THREE.CylinderGeometry(0.14, 0.12, 0.4, 8);
+  const leftLeg = new THREE.Mesh(legGeo, tankSkin);
+  leftLeg.position.set(-0.2, 0.5, 0);
+  group.add(leftLeg);
+  const rightLeg = new THREE.Mesh(legGeo, tankSkin);
+  rightLeg.position.set(0.2, 0.5, 0);
+  group.add(rightLeg);
+  
+  // Shin guards
+  const shinGuardGeo = new THREE.BoxGeometry(0.16, 0.25, 0.1);
+  const leftGuard = new THREE.Mesh(shinGuardGeo, armor);
+  leftGuard.position.set(-0.2, 0.25, 0.1);
+  group.add(leftGuard);
+  const rightGuard = new THREE.Mesh(shinGuardGeo, armor);
+  rightGuard.position.set(0.2, 0.25, 0.1);
+  group.add(rightGuard);
+  
+  // Heavy boots
+  const bootGeo = new THREE.BoxGeometry(0.18, 0.1, 0.25);
+  const leftBoot = new THREE.Mesh(bootGeo, armor);
+  leftBoot.position.set(-0.2, 0.0, 0.05);
+  group.add(leftBoot);
+  const rightBoot = new THREE.Mesh(bootGeo, armor);
+  rightBoot.position.set(0.2, 0.0, 0.05);
+  group.add(rightBoot);
+  
+  // Enable shadows
+  group.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.castShadow = true;
+      child.receiveShadow = true;
+    }
+  });
+  
+  return group;
+}
+
+// ============================================
 // Get all materials for death animation fade
 // ============================================
 export function getEnemyMaterials(group: THREE.Group): THREE.MeshStandardMaterial[] {

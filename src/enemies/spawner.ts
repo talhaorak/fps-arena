@@ -17,6 +17,9 @@ export class EnemyManager {
   
   /** Callback for enemy death effects (explosion) */
   public onEnemyDeath: ((point: THREE.Vector3) => void) | null = null;
+  
+  /** Callback for headshot bonus */
+  public onHeadshot: ((point: THREE.Vector3) => void) | null = null;
 
   init(scene: THREE.Scene): void {
     this.scene = scene;
@@ -122,15 +125,31 @@ export class EnemyManager {
 
       const dist = enemy.getPosition().distanceTo(point);
       if (dist <= range) {
+        // Check for headshot (hit point is high on the enemy)
+        const enemyY = enemy.getPosition().y;
+        const hitHeight = point.y - enemyY;
+        const isHeadshot = hitHeight > 1.4; // Head is above 1.4m
+        
         // Falloff: full damage at center, linear falloff to edge
         const falloff = range > 0 ? 1 - dist / range : 1;
-        const actualDamage = Math.max(1, Math.round(damage * Math.max(falloff, 0.3)));
+        let actualDamage = Math.max(1, Math.round(damage * Math.max(falloff, 0.3)));
+        
+        // Headshot bonus: 2.5x damage!
+        if (isHeadshot) {
+          actualDamage = Math.round(actualDamage * 2.5);
+          if (this.onHeadshot) {
+            this.onHeadshot(point);
+          }
+        }
+        
         const killed = enemy.takeDamage(actualDamage);
         
         // Trigger hit effect (blood splatter)
         if (this.onEnemyHit) {
           const hitPoint = point.clone();
-          hitPoint.y = enemy.getPosition().y + 0.8; // Center of body
+          if (!isHeadshot) {
+            hitPoint.y = enemyY + 0.8; // Center of body
+          }
           this.onEnemyHit(hitPoint, hitDirection);
         }
         

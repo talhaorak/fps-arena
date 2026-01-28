@@ -54,6 +54,17 @@ export class FPSCamera {
   setPosition(pos: THREE.Vector3) {
     this.camera.position.set(pos.x, pos.y + GAME.PLAYER_HEIGHT + this.bobAmount, pos.z);
   }
+  
+  applyShake(offsetX: number, offsetY: number) {
+    // Apply shake offset to camera rotation
+    const euler = new THREE.Euler(
+      this.pitch + offsetY * 0.01,
+      this.yaw + offsetX * 0.01,
+      0,
+      'YXZ'
+    );
+    this.camera.quaternion.setFromEuler(euler);
+  }
 
   getCamera(): THREE.PerspectiveCamera { return this.camera; }
   isLocked(): boolean { return this.locked; }

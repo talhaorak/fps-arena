@@ -29,6 +29,8 @@ export class AudioManager {
       damage: {freq: 100, dur: 0.2, decay: 10},
       ambient: {freq: 60, dur: 2, decay: 1},
       wave_start: {freq: 440, dur: 0.8, decay: 3, type: 'triangle'},
+      headshot: {freq: 1200, dur: 0.15, decay: 20, type: 'square'}, // High-pitched satisfying sound
+      pickup: {freq: 660, dur: 0.2, decay: 15, type: 'triangle'}, // Pleasant chime
     };
 
     const s = sounds[event.type];

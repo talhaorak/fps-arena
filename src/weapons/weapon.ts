@@ -250,6 +250,12 @@ export class WeaponManager {
   getWeapons(): Weapon[] {
     return this.weapons;
   }
+  
+  // Add ammo to current weapon's reserve
+  addReserveAmmo(amount: number): void {
+    const weapon = this.weapons[this.currentIndex];
+    weapon.reserveAmmo += amount;
+  }
 
   dispose(): void {
     this.effects.dispose();

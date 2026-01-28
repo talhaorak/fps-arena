@@ -77,6 +77,10 @@ export class PlayerController {
     if (this.health <= 0) { this.health = 0; return true; }
     return false;
   }
+  
+  heal(amount: number): void {
+    this.health = Math.min(GAME.PLAYER_MAX_HEALTH, this.health + amount);
+  }
 
   getPosition(): THREE.Vector3 { return this.position.clone(); }
   getVelocity(): THREE.Vector3 { return this.velocity.clone(); }

@@ -242,4 +242,44 @@ export class HUD {
     this.killNotifications.appendChild(el);
     setTimeout(() => el.remove(), 2500);
   }
+  
+  showPickup(type: 'health' | 'ammo', amount: number) {
+    const el = document.createElement('div');
+    const icon = type === 'health' ? '❤️' : '🔫';
+    const color = type === 'health' ? '#4f4' : '#fa0';
+    el.innerHTML = `${icon} +${amount}`;
+    el.style.cssText = `
+      position:absolute;
+      left:50%;
+      top:60%;
+      transform:translate(-50%,-50%);
+      font-size:24px;
+      color:${color};
+      font-weight:bold;
+      animation:fadeUp 1s forwards;
+      pointer-events:none;
+      text-shadow: 0 0 10px ${color};
+    `;
+    this.killNotifications.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  }
+  
+  showHeadshot() {
+    const el = document.createElement('div');
+    el.textContent = '💀 HEADSHOT!';
+    el.style.cssText = `
+      position:absolute;
+      left:50%;
+      top:35%;
+      transform:translate(-50%,-50%) scale(1.5);
+      font-size:28px;
+      color:#f40;
+      font-weight:bold;
+      animation:fadeUp 1.5s forwards;
+      pointer-events:none;
+      text-shadow: 0 0 20px rgba(255,68,0,0.8), 0 0 40px rgba(255,68,0,0.5);
+    `;
+    this.killNotifications.appendChild(el);
+    setTimeout(() => el.remove(), 1500);
+  }
 }

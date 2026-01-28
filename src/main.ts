@@ -1,11 +1,13 @@
 import { GameEngine } from './core/engine';
 import { SceneBuilder } from './core/scene';
+import { ScreenEffects } from './core/effects';
 import { FPSCamera } from './player/camera';
 import { PlayerController } from './player/controller';
 import { InputManager } from './player/input';
 import { WeaponManager } from './weapons/weapon';
 import { WeaponEffects } from './weapons/effects';
 import { EnemyManager } from './enemies/spawner';
+import { PickupManager } from './items/pickup';
 import { HUD } from './ui/hud';
 import { Crosshair } from './ui/crosshair';
 import { MenuManager } from './ui/menu';
@@ -44,10 +46,22 @@ enemyEffects.init(scene);
 // Wire up enemy effect callbacks
 enemies.onEnemyHit = (point, direction) => {
   enemyEffects.createBloodSplatter(point, direction);
+  screenFx.gunShake();
 };
 
 enemies.onEnemyDeath = (point) => {
   enemyEffects.createDeathExplosion(point);
+  screenFx.explosionShake();
+  // Spawn loot
+  pickups.maybeSpawn(point, 0.5); // 50% chance for loot
+};
+
+// Headshot callback
+enemies.onHeadshot = (point) => {
+  screenFx.headshotSlowMo();
+  screenFx.headshotFlash();
+  audio.play({ type: 'headshot' });
+  hud.showHeadshot();
 };
 
 const hud = new HUD();
@@ -60,6 +74,24 @@ const audio = new AudioManager();
 audio.init();
 
 const minimap = new Minimap();
+
+const screenFx = new ScreenEffects();
+
+const pickups = new PickupManager();
+pickups.init(scene);
+
+// Pickup callbacks
+pickups.onHealthPickup = (amount) => {
+  player.heal(amount);
+  audio.play({ type: 'pickup' });
+  hud.showPickup('health', amount);
+};
+
+pickups.onAmmoPickup = (amount) => {
+  weapons.addReserveAmmo(amount);
+  audio.play({ type: 'pickup' });
+  hud.showPickup('ammo', amount);
+};
 
 const menu = new MenuManager();
 
@@ -76,6 +108,7 @@ enemies.onPlayerDamage = (damage: number) => {
   const dead = player.takeDamage(damage);
   hud.showDamage();
   audio.play({ type: 'damage' });
+  screenFx.damageShake();
   if (dead) {
     gameOver = true;
     fpsCamera.unlock();
@@ -113,20 +146,37 @@ document.addEventListener('pointerlockchange', () => {
 });
 
 // === GAME LOOP ===
-engine.onUpdate((delta) => {
+engine.onUpdate((realDelta) => {
   if (!gameStarted || gameOver) return;
   if (!fpsCamera.isLocked()) return;
-
+  
+  // Update screen effects (always at real time)
+  screenFx.update(realDelta);
+  
+  // Apply time scale for slow-motion
+  const delta = realDelta * screenFx.getTimeScale();
+  
+  // Apply screen shake to camera
+  const shake = screenFx.getShakeOffset();
+  
   // Player
   player.update(delta, input, fpsCamera);
-  fpsCamera.setPosition(player.getPosition());
-  audio.setListenerPosition(player.getPosition(), fpsCamera.getDirection());
+  const playerPos = player.getPosition();
+  fpsCamera.setPosition(playerPos);
+  fpsCamera.applyShake(shake.x, shake.y);
+  audio.setListenerPosition(playerPos, fpsCamera.getDirection());
+  
+  // Low health vignette
+  screenFx.setHealthVignette((player.getHealth() / GAME.PLAYER_MAX_HEALTH) * 100);
 
   // Weapons
   weapons.update(delta);
   
   // Enemy effects (blood, explosions)
   enemyEffects.update(delta);
+  
+  // Pickups
+  pickups.update(delta, playerPos);
 
   // Shooting
   if (input.isMouseDown(0)) {
@@ -171,11 +221,17 @@ engine.onUpdate((delta) => {
     prevKillCount = currentKills;
   }
 
-  // Wave complete?
+  // Wave complete? Trigger dramatic slow-mo!
   if (enemies.isWaveComplete() && wave > 0) {
     score += GAME.WAVE_BONUS;
     prevKillCount = 0;
-    nextWave();
+    screenFx.waveSlowMo(); // Dramatic slow-motion
+    // Delay next wave spawn until slow-mo ends
+    setTimeout(() => {
+      if (gameStarted && !gameOver) {
+        nextWave();
+      }
+    }, 2000);
   }
 
   // HUD
