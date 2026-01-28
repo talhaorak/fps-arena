@@ -163,12 +163,23 @@ if (!isMobile) {
   });
 }
 
+// Debug: frame counter for mobile
+let frameCount = 0;
+
 // === GAME LOOP ===
 engine.onUpdate((realDelta) => {
   if (!gameStarted || gameOver) return;
   
   // On desktop, require pointer lock; on mobile, always run
   if (!isMobile && !fpsCamera.isLocked()) return;
+  
+  // Debug log every 60 frames on mobile
+  if (isMobile) {
+    frameCount++;
+    if (frameCount % 60 === 0) {
+      console.log('[Mobile] Frame:', frameCount, 'realDelta:', realDelta.toFixed(4), 'timeScale:', screenFx.getTimeScale().toFixed(2));
+    }
+  }
   
   // Update screen effects (always at real time)
   screenFx.update(realDelta);
@@ -208,6 +219,12 @@ engine.onUpdate((realDelta) => {
 
   // Shooting (desktop or mobile)
   const isFiring = isMobile ? (mobileInput?.fire ?? false) : input.isMouseDown(0);
+  
+  // Debug log for mobile
+  if (isMobile && isFiring) {
+    console.log('[Mobile] Fire pressed, timeScale:', screenFx.getTimeScale(), 'delta:', delta);
+  }
+  
   if (isFiring) {
     try {
       const hits = weapons.shoot();

@@ -221,6 +221,7 @@ export class MobileControls {
       this.input.fire = true;
       this.fireButton.style.transform = 'scale(0.9)';
       this.fireButton.style.background = '#ff444488';
+      console.log('[Mobile] Fire START');
     }, { passive: false });
     
     this.fireButton.addEventListener('touchend', (e) => {
@@ -229,6 +230,7 @@ export class MobileControls {
       this.input.fire = false;
       this.fireButton.style.transform = 'scale(1)';
       this.fireButton.style.background = '#ff444444';
+      console.log('[Mobile] Fire END');
     }, { passive: false });
     
     // Also handle touchcancel
@@ -236,6 +238,7 @@ export class MobileControls {
       this.input.fire = false;
       this.fireButton.style.transform = 'scale(1)';
       this.fireButton.style.background = '#ff444444';
+      console.log('[Mobile] Fire CANCEL');
     }, { passive: false });
     
     // Reload button (tap)
