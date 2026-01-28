@@ -1,64 +1,86 @@
-// ============================================
-// MAIN ENTRY POINT
-// Imports all modules and starts the game
-// ============================================
-// This file will be the integration point.
-// Each agent works on their module independently.
-// Orchestrator merges and wires everything here.
+import { GameEngine } from './core/engine';
+import { SceneBuilder } from './core/scene';
+import { InputManager } from './player/input';
+import { FPSCamera } from './player/camera';
+import { PlayerController } from './player/controller';
 
-import * as THREE from 'three';
-import { GAME } from './constants';
+// ---- bootstrap ----
+const engine   = new GameEngine();
+const sceneBuilder = new SceneBuilder();
+const input    = new InputManager();
+const fpsCamera = new FPSCamera();
+const player   = new PlayerController(fpsCamera);
 
-console.log('[FPS Game] Initializing...');
-console.log('[FPS Game] Three.js version:', THREE.REVISION);
-console.log('[FPS Game] Target FPS:', GAME.TARGET_FPS);
+function main(): void {
+  // 1. Engine (renderer + scene)
+  engine.init();
 
-// Placeholder — will be replaced during integration
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.shadowMap.enabled = true;
-document.body.appendChild(renderer.domElement);
+  // 2. Build level
+  const scene = engine.getScene();
+  sceneBuilder.build(scene);
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x1a1a2e);
-scene.fog = new THREE.Fog(0x1a1a2e, 10, GAME.FAR_CLIP);
+  // 3. Player + camera
+  const domElement = engine.getDomElement();
+  fpsCamera.init(domElement);
+  player.init(scene, sceneBuilder.getWalls());
 
-const camera = new THREE.PerspectiveCamera(
-  GAME.FOV,
-  window.innerWidth / window.innerHeight,
-  GAME.NEAR_CLIP,
-  GAME.FAR_CLIP
-);
-camera.position.set(0, GAME.PLAYER_HEIGHT, 0);
+  // Place player at first spawn point
+  const spawns = sceneBuilder.getSpawnPoints();
+  if (spawns.length > 0) {
+    player.setPosition(spawns[0]);
+  }
 
-// Temporary: basic lighting + ground
-const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-scene.add(ambientLight);
-const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-dirLight.position.set(10, 20, 10);
-dirLight.castShadow = true;
-scene.add(dirLight);
+  // 4. Input
+  input.init();
 
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(GAME.WORLD_SIZE * 2, GAME.WORLD_SIZE * 2),
-  new THREE.MeshStandardMaterial({ color: 0x333333 })
-);
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
+  // 5. Tell engine which camera to render with
+  engine.setCamera(fpsCamera.getCamera());
 
-// Temporary game loop
-function animate() {
-  requestAnimationFrame(animate);
-  renderer.render(scene, camera);
+  // 6. Game loop callback
+  engine.onUpdate((delta) => {
+    player.update(delta, input);
+  });
+
+  // 7. Pointer-lock click-to-start
+  const overlay = createOverlay();
+  overlay.addEventListener('click', () => {
+    fpsCamera.lock();
+  });
+
+  document.addEventListener('pointerlockchange', () => {
+    overlay.style.display = fpsCamera.isLocked() ? 'none' : 'flex';
+  });
+
+  // 8. Start!
+  engine.start();
 }
-animate();
 
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+/** Simple full-screen overlay prompting the user to click */
+function createOverlay(): HTMLDivElement {
+  const overlay = document.createElement('div');
+  overlay.id = 'start-overlay';
+  Object.assign(overlay.style, {
+    position: 'fixed',
+    inset: '0',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(0,0,0,0.75)',
+    color: '#fff',
+    fontFamily: 'monospace',
+    fontSize: '24px',
+    cursor: 'pointer',
+    zIndex: '1000',
+    userSelect: 'none',
+  });
+  overlay.textContent = '🎯 Click to Start';
+  document.body.appendChild(overlay);
+  return overlay;
+}
 
-console.log('[FPS Game] Scaffold ready. Awaiting module integration.');
+// Remove default margin/padding
+const style = document.createElement('style');
+style.textContent = `* { margin: 0; padding: 0; } body { overflow: hidden; }`;
+document.head.appendChild(style);
+
+main();
