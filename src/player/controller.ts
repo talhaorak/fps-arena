@@ -3,6 +3,7 @@ import { GAME } from '../constants';
 import { InputManager } from './input';
 import { FPSCamera } from './camera';
 import { applyGravity, checkFloor, checkWallCollisions } from '../core/physics';
+import type { MobileInput } from '../ui/mobile-controls';
 
 export class PlayerController {
   private position = new THREE.Vector3(0, 0, 0);
@@ -70,6 +71,57 @@ export class PlayerController {
     const mouseDelta = input.getMouseDelta();
     camera.update(delta, moveDir.length() > 0, mouseDelta);
     input.resetMouseDelta();
+  }
+
+  // Mobile controls update
+  updateMobile(delta: number, mobileInput: MobileInput, camera: FPSCamera) {
+    // Movement direction relative to camera
+    const forward = new THREE.Vector3(0, 0, -1);
+    const right = new THREE.Vector3(1, 0, 0);
+    const yaw = camera.getYaw();
+    forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    right.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+    const moveDir = new THREE.Vector3();
+    // Use joystick values (-1 to 1)
+    moveDir.add(forward.clone().multiplyScalar(mobileInput.moveY));
+    moveDir.add(right.clone().multiplyScalar(mobileInput.moveX));
+
+    if (moveDir.length() > 1) moveDir.normalize();
+
+    const speed = GAME.PLAYER_SPEED;
+    this.velocity.x = moveDir.x * speed * delta;
+    this.velocity.z = moveDir.z * speed * delta;
+
+    // Jump from mobile input
+    if (mobileInput.jump && this.grounded) {
+      this.velocity.y = GAME.PLAYER_JUMP_FORCE * delta * 3;
+      this.grounded = false;
+    }
+
+    // Gravity
+    applyGravity(this.velocity, delta, this.grounded);
+    this.position.y += this.velocity.y * delta;
+
+    // Wall collisions
+    const newPos = checkWallCollisions(this.position, new THREE.Vector3(this.velocity.x, 0, this.velocity.z), this.walls);
+    this.position.x = newPos.x;
+    this.position.z = newPos.z;
+
+    // Floor check
+    const floor = checkFloor(this.position, this.scene);
+    this.grounded = floor.grounded;
+    if (this.grounded && this.position.y < floor.height) {
+      this.position.y = floor.height;
+      this.velocity.y = 0;
+    }
+
+    // Update camera position
+    camera.setPosition(this.position);
+
+    // Mobile look (from touch drag)
+    const mouseDelta = { x: mobileInput.lookX, y: mobileInput.lookY };
+    camera.update(delta, moveDir.length() > 0.1, mouseDelta);
   }
 
   takeDamage(amount: number): boolean {

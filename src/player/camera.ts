@@ -8,6 +8,7 @@ export class FPSCamera {
   private bobTimer = 0;
   private bobAmount = 0;
   private locked = false;
+  public mobileMode = false;
 
   constructor() {
     this.camera = new THREE.PerspectiveCamera(
@@ -32,19 +33,23 @@ export class FPSCamera {
   }
 
   update(delta: number, isMoving: boolean, mouseDelta: { x: number; y: number }) {
-    if (!this.locked) return;
+    // Allow update in mobile mode or when locked
+    if (!this.locked && !this.mobileMode) return;
 
-    this.yaw -= mouseDelta.x * GAME.MOUSE_SENSITIVITY;
-    this.pitch -= mouseDelta.y * GAME.MOUSE_SENSITIVITY;
+    // Different sensitivity for mobile
+    const sensitivity = this.mobileMode ? GAME.MOUSE_SENSITIVITY * 2 : GAME.MOUSE_SENSITIVITY;
+    
+    this.yaw -= mouseDelta.x * sensitivity;
+    this.pitch -= mouseDelta.y * sensitivity;
     this.pitch = Math.max(-Math.PI * 85 / 180, Math.min(Math.PI * 85 / 180, this.pitch));
 
     const euler = new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ');
     this.camera.quaternion.setFromEuler(euler);
 
-    // Head bob
+    // Head bob (reduced on mobile)
     if (isMoving) {
       this.bobTimer += delta * 10;
-      this.bobAmount = Math.sin(this.bobTimer) * 0.05;
+      this.bobAmount = Math.sin(this.bobTimer) * (this.mobileMode ? 0.02 : 0.05);
     } else {
       this.bobAmount *= 0.9;
       this.bobTimer = 0;

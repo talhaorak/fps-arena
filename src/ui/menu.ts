@@ -1,5 +1,9 @@
 import { getHighScores, saveHighScore, formatHighScores } from './highscores';
 
+// Detect mobile
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  || (navigator.maxTouchPoints > 0 && window.innerWidth < 1024);
+
 export class MenuManager {
   private startScreen: HTMLElement;
   private pauseScreen: HTMLElement;
@@ -8,17 +12,22 @@ export class MenuManager {
   onRestart?: () => void;
 
   constructor() {
-    const base = 'position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);font-family:monospace;color:#fff;z-index:50;';
-    const btn = 'padding:14px 40px;font-size:18px;background:linear-gradient(180deg,#e44,#b22);color:#fff;border:none;cursor:pointer;font-family:monospace;margin:8px;border-radius:4px;text-transform:uppercase;letter-spacing:2px;transition:transform 0.1s;';
+    const base = 'position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);font-family:monospace;color:#fff;z-index:50;overflow-y:auto;padding:20px;box-sizing:border-box;';
+    const btn = 'padding:14px 40px;font-size:18px;background:linear-gradient(180deg,#e44,#b22);color:#fff;border:none;cursor:pointer;font-family:monospace;margin:8px;border-radius:4px;text-transform:uppercase;letter-spacing:2px;transition:transform 0.1s;-webkit-tap-highlight-color:transparent;';
     const btnHover = 'onmouseenter="this.style.transform=\'scale(1.05)\'" onmouseleave="this.style.transform=\'scale(1)\'"';
+
+    // Different instructions for mobile vs desktop
+    const controls = isMobile
+      ? '🕹️ Left=Move | 👆 Right=Look | 🔫 Fire | ⟳ Reload | ⬆ Jump'
+      : 'WASD=Move | Mouse=Look | Click=Shoot | R=Reload | 1-3=Weapons';
 
     this.startScreen = document.createElement('div');
     this.startScreen.style.cssText = base;
     this.startScreen.innerHTML = `
-      <h1 style="font-size:3.5em;margin-bottom:10px;text-shadow:0 0 20px rgba(255,50,50,0.5);">⚔️ FPS ARENA</h1>
-      <p style="color:#888;margin-bottom:30px;font-size:0.9em;">WASD=Move | Mouse=Look | Click=Shoot | R=Reload | 1-3=Weapons</p>
+      <h1 style="font-size:${isMobile ? '2em' : '3.5em'};margin-bottom:10px;text-shadow:0 0 20px rgba(255,50,50,0.5);">⚔️ FPS ARENA</h1>
+      <p style="color:#888;margin-bottom:30px;font-size:${isMobile ? '0.75em' : '0.9em'};text-align:center;padding:0 10px;">${controls}</p>
       <button style="${btn}" ${btnHover}>START GAME</button>
-      <div class="highscores" style="margin-top:40px;width:300px;background:rgba(255,255,255,0.05);padding:15px 20px;border-radius:8px;">
+      <div class="highscores" style="margin-top:40px;width:${isMobile ? '90%' : '300px'};max-width:300px;background:rgba(255,255,255,0.05);padding:15px 20px;border-radius:8px;">
         <h3 style="margin:0 0 10px 0;color:#ff6;font-size:1.1em;">🏆 HIGH SCORES</h3>
         <div class="hs-list" style="font-size:0.85em;"></div>
       </div>

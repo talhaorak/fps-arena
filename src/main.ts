@@ -12,6 +12,7 @@ import { HUD } from './ui/hud';
 import { Crosshair } from './ui/crosshair';
 import { MenuManager } from './ui/menu';
 import { Minimap } from './ui/minimap';
+import { MobileControls } from './ui/mobile-controls';
 import { AudioManager } from './audio/sound';
 import { GAME } from './constants';
 
@@ -77,6 +78,10 @@ const minimap = new Minimap();
 
 const screenFx = new ScreenEffects();
 
+// Mobile controls
+const mobileControls = new MobileControls();
+const isMobile = MobileControls.isMobile();
+
 const pickups = new PickupManager();
 pickups.init(scene);
 
@@ -121,8 +126,17 @@ function startGame() {
   score = 0; kills = 0; wave = 0; prevKillCount = 0;
   gameStarted = true; gameOver = false;
   player.reset(spawnPoints[0]);
+  pickups.clear();
   nextWave();
-  fpsCamera.lock();
+  
+  if (isMobile) {
+    fpsCamera.mobileMode = true;
+    mobileControls.show();
+    // On mobile, we don't use pointer lock - fullscreen instead
+    document.documentElement.requestFullscreen?.().catch(() => {});
+  } else {
+    fpsCamera.lock();
+  }
 }
 
 function nextWave() {
@@ -138,17 +152,23 @@ menu.showStart();
 
 // === BLOCKER ===
 const blocker = document.getElementById('blocker')!;
-blocker.style.display = 'none';
-document.addEventListener('pointerlockchange', () => {
-  if (!document.pointerLockElement && gameStarted && !gameOver) {
-    menu.showPause();
-  }
-});
+if (blocker) blocker.style.display = 'none';
+
+// Only use pointer lock change for desktop
+if (!isMobile) {
+  document.addEventListener('pointerlockchange', () => {
+    if (!document.pointerLockElement && gameStarted && !gameOver) {
+      menu.showPause();
+    }
+  });
+}
 
 // === GAME LOOP ===
 engine.onUpdate((realDelta) => {
   if (!gameStarted || gameOver) return;
-  if (!fpsCamera.isLocked()) return;
+  
+  // On desktop, require pointer lock; on mobile, always run
+  if (!isMobile && !fpsCamera.isLocked()) return;
   
   // Update screen effects (always at real time)
   screenFx.update(realDelta);
@@ -159,8 +179,16 @@ engine.onUpdate((realDelta) => {
   // Apply screen shake to camera
   const shake = screenFx.getShakeOffset();
   
-  // Player
-  player.update(delta, input, fpsCamera);
+  // Get mobile input if on mobile
+  const mobileInput = isMobile ? mobileControls.getInput() : null;
+  
+  // Player update (with mobile input support)
+  if (isMobile && mobileInput) {
+    player.updateMobile(delta, mobileInput, fpsCamera);
+  } else {
+    player.update(delta, input, fpsCamera);
+  }
+  
   const playerPos = player.getPosition();
   fpsCamera.setPosition(playerPos);
   fpsCamera.applyShake(shake.x, shake.y);
@@ -178,15 +206,16 @@ engine.onUpdate((realDelta) => {
   // Pickups
   pickups.update(delta, playerPos);
 
-  // Shooting
-  if (input.isMouseDown(0)) {
+  // Shooting (desktop or mobile)
+  const isFiring = isMobile ? (mobileInput?.fire ?? false) : input.isMouseDown(0);
+  if (isFiring) {
     const hits = weapons.shoot();
     if (hits && hits.length > 0) {
       audio.play({ type: 'gunshot' });
+      screenFx.gunShake();
       for (const hit of hits) {
         if (hit.object?.userData?.isEnemy) {
           const weapon = weapons.getCurrentWeapon();
-          // Pass hit direction for blood splatter
           const hitDirection = fpsCamera.getDirection();
           enemies.applyDamageAtPoint(hit.point, weapon.damage, 0.5, hitDirection);
           audio.play({ type: 'hit', position: hit.point });
@@ -195,13 +224,18 @@ engine.onUpdate((realDelta) => {
     }
   }
 
-  // Reload
-  if (input.isKeyDown('KeyR')) weapons.reload();
+  // Reload (desktop or mobile)
+  if (isMobile ? (mobileInput?.reload ?? false) : input.isKeyDown('KeyR')) {
+    weapons.reload();
+  }
 
-  // Weapon switch
-  if (input.isKeyDown('Digit1')) weapons.switchWeapon(0);
-  if (input.isKeyDown('Digit2')) weapons.switchWeapon(1);
-  if (input.isKeyDown('Digit3')) weapons.switchWeapon(2);
+  // Weapon switch (desktop or mobile)
+  if (isMobile ? (mobileInput?.weapon1 ?? false) : input.isKeyDown('Digit1')) weapons.switchWeapon(0);
+  if (isMobile ? (mobileInput?.weapon2 ?? false) : input.isKeyDown('Digit2')) weapons.switchWeapon(1);
+  if (isMobile ? (mobileInput?.weapon3 ?? false) : input.isKeyDown('Digit3')) weapons.switchWeapon(2);
+  
+  // Reset mobile one-shot inputs
+  if (isMobile) mobileControls.resetOneShot();
 
   // Enemies
   enemies.update(delta, player.getPosition());
