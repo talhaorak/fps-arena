@@ -107,6 +107,7 @@ let wave = 0;
 let gameStarted = false;
 let gameOver = false;
 let prevKillCount = 0;
+let waveCompleted = false; // Flag to prevent multiple wave completion triggers
 
 // === Enemy damage callback ===
 enemies.onPlayerDamage = (damage: number) => {
@@ -124,6 +125,7 @@ enemies.onPlayerDamage = (damage: number) => {
 // === START / RESTART ===
 function startGame() {
   score = 0; kills = 0; wave = 0; prevKillCount = 0;
+  waveCompleted = false;
   gameStarted = true; gameOver = false;
   player.reset(spawnPoints[0]);
   pickups.clear();
@@ -141,9 +143,11 @@ function startGame() {
 
 function nextWave() {
   wave++;
+  waveCompleted = false; // Reset flag for new wave
   enemies.spawnWave(wave);
   audio.play({ type: 'wave_start' });
   hud.showWaveStart(wave);
+  console.log('[Wave] Started wave', wave);
 }
 
 menu.onStart = startGame;
@@ -276,11 +280,13 @@ engine.onUpdate((realDelta) => {
     prevKillCount = currentKills;
   }
 
-  // Wave complete? Trigger dramatic slow-mo!
-  if (enemies.isWaveComplete() && wave > 0) {
+  // Wave complete? Trigger dramatic slow-mo! (only once per wave)
+  if (enemies.isWaveComplete() && wave > 0 && !waveCompleted) {
+    waveCompleted = true; // Prevent multiple triggers
     score += GAME.WAVE_BONUS;
     prevKillCount = 0;
     screenFx.waveSlowMo(); // Dramatic slow-motion
+    console.log('[Wave] Completed! Starting slow-mo...');
     // Delay next wave spawn until slow-mo ends
     setTimeout(() => {
       if (gameStarted && !gameOver) {
