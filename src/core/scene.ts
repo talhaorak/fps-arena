@@ -16,7 +16,7 @@ export class SceneBuilder {
 
     // === FLOOR ===
     const floorGeo = new THREE.PlaneGeometry(GAME.WORLD_SIZE * 2, GAME.WORLD_SIZE * 2);
-    const floorMat = new THREE.MeshStandardMaterial({ map: concreteTex, roughness: 0.85, metalness: 0.05 });
+    const floorMat = new THREE.MeshStandardMaterial({ map: concreteTex, roughness: 0.8, metalness: 0.05, color: 0xbbbbbb });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
@@ -24,10 +24,10 @@ export class SceneBuilder {
     scene.add(floor);
 
     // === LIGHTING ===
-    const ambient = new THREE.AmbientLight(0x8899bb, 0.8);
+    const ambient = new THREE.AmbientLight(0x99aacc, 1.5);
     scene.add(ambient);
 
-    const dirLight = new THREE.DirectionalLight(0xffeedd, 0.9);
+    const dirLight = new THREE.DirectionalLight(0xffeedd, 1.2);
     dirLight.position.set(15, 25, 10);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.set(2048, 2048);
@@ -79,34 +79,40 @@ export class SceneBuilder {
       this.addWall(scene, wallMat, cx - hw, h / 2, cz + hd / 2 + 1, t, h, hd - 2);
 
       // === CEILING per room ===
-      const ceilGeo = new THREE.PlaneGeometry(w, d);
+      const ceilGeo = new THREE.PlaneGeometry(w + 0.5, d + 0.5);
       const ceil = new THREE.Mesh(ceilGeo, ceilMat);
       ceil.rotation.x = Math.PI / 2;
       ceil.position.set(cx, h, cz);
       ceil.receiveShadow = true;
       scene.add(ceil);
 
-      // === ROOM LIGHTING — warm overhead + colored accent ===
+      // === ROOM LIGHTING — warm overhead, attached to ceiling ===
       const mainLight = new THREE.PointLight(0xffeebb, 2.5, w * 3.5);
-      mainLight.position.set(cx, h - 0.3, cz);
+      mainLight.position.set(cx, h - 0.4, cz);
       mainLight.castShadow = true;
       mainLight.shadow.mapSize.set(512, 512);
       scene.add(mainLight);
 
-      // Light fixture visual (cylinder hanging from ceiling)
-      const fixtureGeo = new THREE.CylinderGeometry(0.15, 0.25, 0.3, 8);
-      const fixtureMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.3 });
-      const fixture = new THREE.Mesh(fixtureGeo, fixtureMat);
-      fixture.position.set(cx, h - 0.15, cz);
-      scene.add(fixture);
-      // Glowing bulb
-      const bulbGeo = new THREE.SphereGeometry(0.12, 8, 8);
-      const bulbMat = new THREE.MeshStandardMaterial({ color: 0xffeecc, emissive: 0xffddaa, emissiveIntensity: 2 });
+      // Light fixture — hanging rod + housing + bulb (attached to ceiling)
+      const rodGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.4, 6);
+      const rodMat = new THREE.MeshStandardMaterial({ color: 0x555555, metalness: 0.7, roughness: 0.4 });
+      const rod = new THREE.Mesh(rodGeo, rodMat);
+      rod.position.set(cx, h - 0.2, cz);
+      scene.add(rod);
+
+      const housingGeo = new THREE.CylinderGeometry(0.08, 0.18, 0.15, 8);
+      const housingMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.3 });
+      const housing = new THREE.Mesh(housingGeo, housingMat);
+      housing.position.set(cx, h - 0.42, cz);
+      scene.add(housing);
+
+      const bulbGeo = new THREE.SphereGeometry(0.08, 8, 8);
+      const bulbMat = new THREE.MeshStandardMaterial({ color: 0xffeecc, emissive: 0xffddaa, emissiveIntensity: 3 });
       const bulb = new THREE.Mesh(bulbGeo, bulbMat);
-      bulb.position.set(cx, h - 0.35, cz);
+      bulb.position.set(cx, h - 0.52, cz);
       scene.add(bulb);
 
-      // Fill light
+      // Fill light from below
       const fill = new THREE.PointLight(0x99aacc, 0.6, w * 2);
       fill.position.set(cx, h * 0.4, cz);
       scene.add(fill);
@@ -124,51 +130,85 @@ export class SceneBuilder {
     const barrelMat = new THREE.MeshStandardMaterial({ map: metalTex, color: 0x446644, roughness: 0.5, metalness: 0.3 });
     const barrelTopMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.6, roughness: 0.4 });
 
-    // Crates in rooms
-    const cratePositions = [
-      [-3, 0.5, -3], [4, 0.5, 2], [-19, 0.5, 2], [21, 0.5, -2],
-      [2, 0.5, -19], [-1, 0.5, 19], [-2, 1.5, -3], // stacked
+    // Crates in rooms — small military crates (~knee to waist height)
+    const crateConfigs = [
+      { pos: [-4, 0, -4], size: 0.45 },
+      { pos: [4.5, 0, 3], size: 0.5 },
+      { pos: [-19.5, 0, 2.5], size: 0.4 },
+      { pos: [21, 0, -2.5], size: 0.45 },
+      { pos: [2.5, 0, -19.5], size: 0.4 },
+      { pos: [-1.5, 0, 19.5], size: 0.5 },
+      { pos: [-4, 0.45, -4], size: 0.35 }, // stacked on first
+      { pos: [4.9, 0, 3.4], size: 0.4 },
     ];
-    for (const [x, y, z] of cratePositions) {
-      const size = 0.7 + Math.random() * 0.5;
-      const crate = new THREE.Mesh(new THREE.BoxGeometry(size, size, size), crateMatl);
-      crate.position.set(x, y, z);
-      crate.rotation.y = Math.random() * 0.4 - 0.2;
+    for (const cfg of crateConfigs) {
+      const s = cfg.size;
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), crateMatl);
+      crate.position.set(cfg.pos[0], cfg.pos[1] + s / 2, cfg.pos[2]);
+      crate.rotation.y = Math.random() * 0.3 - 0.15;
       crate.castShadow = true;
       crate.receiveShadow = true;
-      crate.userData.isWall = true; // collide
+      crate.userData.isWall = true;
       scene.add(crate);
       this.walls.push(crate);
     }
 
-    // Barrels
+    // Barrels — realistic scale (~0.6m diameter, ~0.9m tall, waist height)
     const barrelPositions = [
       [5, 0, -5], [-5, 0, 4], [18, 0, 3], [-18, 0, -3],
       [3, 0, 18], [-2, 0, -18],
     ];
     for (const [x, _, z] of barrelPositions) {
       const barrel = new THREE.Group();
-      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 1.2, 12), barrelMat);
-      body.position.y = 0.6;
+      const bRadius = 0.22, bHeight = 0.75;
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(bRadius, bRadius * 0.95, bHeight, 16), barrelMat);
+      body.position.y = bHeight / 2;
       body.castShadow = true;
+      body.receiveShadow = true;
       barrel.add(body);
-      // Top rim
-      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.04, 8, 16), barrelTopMat);
-      rim.rotation.x = Math.PI / 2;
-      rim.position.y = 1.2;
-      barrel.add(rim);
-      // Bottom rim
-      const rim2 = rim.clone();
-      rim2.position.y = 0.02;
-      barrel.add(rim2);
+      // Top & bottom rims
+      for (const ry of [bHeight, 0.02]) {
+        const rim = new THREE.Mesh(new THREE.TorusGeometry(bRadius, 0.025, 8, 16), barrelTopMat);
+        rim.rotation.x = Math.PI / 2;
+        rim.position.y = ry;
+        barrel.add(rim);
+      }
       // Middle band
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.03, 8, 16), barrelTopMat);
+      const band = new THREE.Mesh(new THREE.TorusGeometry(bRadius + 0.01, 0.02, 8, 16), barrelTopMat);
       band.rotation.x = Math.PI / 2;
-      band.position.y = 0.6;
+      band.position.y = bHeight / 2;
       barrel.add(band);
 
       barrel.position.set(x, 0, z);
       scene.add(barrel);
+    }
+
+    // === CORRIDOR CEILINGS — connect rooms ===
+    const corridors: [number, number, number, number][] = [
+      // [centerX, centerZ, width, depth]
+      [0, 9.5, 3, 5],     // Central → North
+      [0, -9.5, 3, 5],    // Central → South
+      [10, 0, 6, 3],      // Central → East
+      [-10, 0, 6, 3],     // Central → West
+    ];
+    for (const [ccx, ccz, cw, cd] of corridors) {
+      const corrCeil = new THREE.Mesh(new THREE.PlaneGeometry(cw, cd), ceilMat);
+      corrCeil.rotation.x = Math.PI / 2;
+      corrCeil.position.set(ccx, h, ccz);
+      scene.add(corrCeil);
+
+      // Corridor light
+      const corrLight = new THREE.PointLight(0xddccaa, 1.2, 8);
+      corrLight.position.set(ccx, h - 0.3, ccz);
+      scene.add(corrLight);
+
+      // Small fixture in corridor
+      const corrBulb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 6, 6),
+        new THREE.MeshStandardMaterial({ color: 0xffeecc, emissive: 0xffcc88, emissiveIntensity: 2 })
+      );
+      corrBulb.position.set(ccx, h - 0.15, ccz);
+      scene.add(corrBulb);
     }
 
     // === FLOOR DETAILS — darker patches under doorways ===
