@@ -123,9 +123,12 @@ export class ScreenEffects {
   
   // --- UPDATE ---
   update(delta: number): void {
+    // Clamp delta to prevent freezing
+    const safeDelta = Math.min(delta, 0.1);
+    
     // Shake update
     if (this.shakeDuration > 0) {
-      this.shakeTime += delta;
+      this.shakeTime += safeDelta;
       const progress = this.shakeTime / this.shakeDuration;
       
       if (progress < 1) {
@@ -144,17 +147,21 @@ export class ScreenEffects {
     
     // Slow-mo update
     if (this.slowMoDuration > 0) {
-      this.slowMoScale = this.slowMoTarget;
-      this.slowMoDuration -= delta / this.slowMoScale; // Real time
+      this.slowMoScale = Math.max(0.1, this.slowMoTarget); // Never go below 10% speed
+      this.slowMoDuration -= safeDelta / Math.max(0.1, this.slowMoScale);
       if (this.slowMoDuration <= 0) {
         this.slowMoScale = 1;
         this.slowMoTarget = 1;
+        this.slowMoDuration = 0;
       }
     } else {
       // Lerp back to normal speed
-      this.slowMoScale += (1 - this.slowMoScale) * 5 * delta;
+      this.slowMoScale += (1 - this.slowMoScale) * 5 * safeDelta;
       if (this.slowMoScale > 0.99) this.slowMoScale = 1;
     }
+    
+    // Safety: never let time scale go to 0
+    this.slowMoScale = Math.max(0.1, Math.min(1, this.slowMoScale));
     
     // Flash decay
     if (this.flashOpacity > 0) {

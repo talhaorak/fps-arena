@@ -209,18 +209,22 @@ engine.onUpdate((realDelta) => {
   // Shooting (desktop or mobile)
   const isFiring = isMobile ? (mobileInput?.fire ?? false) : input.isMouseDown(0);
   if (isFiring) {
-    const hits = weapons.shoot();
-    if (hits && hits.length > 0) {
-      audio.play({ type: 'gunshot' });
-      screenFx.gunShake();
-      for (const hit of hits) {
-        if (hit.object?.userData?.isEnemy) {
-          const weapon = weapons.getCurrentWeapon();
-          const hitDirection = fpsCamera.getDirection();
-          enemies.applyDamageAtPoint(hit.point, weapon.damage, 0.5, hitDirection);
-          audio.play({ type: 'hit', position: hit.point });
+    try {
+      const hits = weapons.shoot();
+      if (hits && hits.length > 0) {
+        audio.play({ type: 'gunshot' });
+        screenFx.gunShake();
+        for (const hit of hits) {
+          if (hit.object?.userData?.isEnemy) {
+            const weapon = weapons.getCurrentWeapon();
+            const hitDirection = fpsCamera.getDirection();
+            enemies.applyDamageAtPoint(hit.point, weapon.damage, 0.5, hitDirection);
+            audio.play({ type: 'hit', position: hit.point });
+          }
         }
       }
+    } catch (err) {
+      console.error('Shooting error:', err);
     }
   }
 

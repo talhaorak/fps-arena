@@ -217,6 +217,7 @@ export class MobileControls {
     // Fire button (hold to fire)
     this.fireButton.addEventListener('touchstart', (e) => {
       e.preventDefault();
+      e.stopPropagation();
       this.input.fire = true;
       this.fireButton.style.transform = 'scale(0.9)';
       this.fireButton.style.background = '#ff444488';
@@ -224,6 +225,14 @@ export class MobileControls {
     
     this.fireButton.addEventListener('touchend', (e) => {
       e.preventDefault();
+      e.stopPropagation();
+      this.input.fire = false;
+      this.fireButton.style.transform = 'scale(1)';
+      this.fireButton.style.background = '#ff444444';
+    }, { passive: false });
+    
+    // Also handle touchcancel
+    this.fireButton.addEventListener('touchcancel', (e) => {
       this.input.fire = false;
       this.fireButton.style.transform = 'scale(1)';
       this.fireButton.style.background = '#ff444444';

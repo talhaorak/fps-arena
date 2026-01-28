@@ -15,7 +15,12 @@ export class AudioManager {
 
   play(event: AudioEvent) {
     if (!this.ctx) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    
+    // Handle suspended AudioContext (especially on mobile)
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+      return; // Skip this sound, will play next time
+    }
     const vol = event.volume ?? 1;
     const dist = event.position ? event.position.distanceTo(this.listenerPos) : 0;
     const spatial = event.position ? Math.max(0, 1 - dist / 80) : 1;
