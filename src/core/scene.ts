@@ -7,23 +7,33 @@ export class SceneBuilder {
   private enemySpawnPoints: THREE.Vector3[] = [];
 
   build(scene: THREE.Scene) {
-    // Floor
+    // Floor — lighter concrete tone
     const floorGeo = new THREE.PlaneGeometry(GAME.WORLD_SIZE * 2, GAME.WORLD_SIZE * 2);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.9 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x5a5a5a, roughness: 0.8 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     floor.userData.isFloor = true;
     scene.add(floor);
 
-    // Grid lines on floor
-    const grid = new THREE.GridHelper(GAME.WORLD_SIZE * 2, 40, 0x444444, 0x333333);
+    // Grid lines on floor — more visible
+    const grid = new THREE.GridHelper(GAME.WORLD_SIZE * 2, 40, 0x777777, 0x555555);
     grid.position.y = 0.01;
     scene.add(grid);
 
-    // Lighting
-    const ambient = new THREE.AmbientLight(0x303040, 0.4);
+    // Lighting — bright enough to see!
+    const ambient = new THREE.AmbientLight(0x8899bb, 1.2);
     scene.add(ambient);
+
+    // Directional light (sun-like) for overall visibility
+    const dirLight = new THREE.DirectionalLight(0xffeedd, 1.0);
+    dirLight.position.set(10, 20, 10);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // Hemisphere light for natural feel
+    const hemi = new THREE.HemisphereLight(0xaaccff, 0x445566, 0.8);
+    scene.add(hemi);
 
     // Room definitions: [centerX, centerZ, width, depth]
     const rooms: [number, number, number, number][] = [
@@ -34,7 +44,7 @@ export class SceneBuilder {
       [0, 18, 10, 10],     // North room (larger)
     ];
 
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x556677, roughness: 0.7 });
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x8899aa, roughness: 0.6 });
     const h = GAME.WALL_HEIGHT;
     const t = 0.4; // wall thickness
 
@@ -59,11 +69,16 @@ export class SceneBuilder {
       this.addWall(scene, wallMat, cx - hw, h / 2, cz - hd / 2 - t, t, h, hd - 1);
       this.addWall(scene, wallMat, cx - hw, h / 2, cz + hd / 2 + t, t, h, hd - 1);
 
-      // Room light
-      const light = new THREE.PointLight(0xffddaa, 1.5, w * 2);
-      light.position.set(cx, h - 0.5, cz);
+      // Room light — brighter, wider range
+      const light = new THREE.PointLight(0xffeedd, 3.0, w * 4);
+      light.position.set(cx, h - 0.3, cz);
       light.castShadow = true;
       scene.add(light);
+
+      // Secondary fill light per room
+      const fill = new THREE.PointLight(0xaabbff, 1.0, w * 3);
+      fill.position.set(cx, h * 0.5, cz);
+      scene.add(fill);
 
       // Spawn points
       this.spawnPoints.push(new THREE.Vector3(cx, 0, cz));
@@ -80,9 +95,9 @@ export class SceneBuilder {
     this.addWall(scene, wallMat, s, h / 2, 0, t, h, s * 2);
     this.addWall(scene, wallMat, -s, h / 2, 0, t, h, s * 2);
 
-    // Ceiling hint: fog
-    scene.fog = new THREE.Fog(0x1a1a2e, 15, GAME.FAR_CLIP * 0.6);
-    scene.background = new THREE.Color(0x1a1a2e);
+    // Subtle fog — don't eat all the light
+    scene.fog = new THREE.Fog(0x334455, 40, GAME.FAR_CLIP * 0.8);
+    scene.background = new THREE.Color(0x334455);
   }
 
   private addWall(scene: THREE.Scene, mat: THREE.Material, x: number, y: number, z: number, w: number, h: number, d: number) {
